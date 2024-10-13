@@ -1,7 +1,8 @@
 package model
 
-
 import (
+	"encoding/json"
+	"os"
 	"sync"
 	"time"
 )
@@ -95,8 +96,47 @@ func (l *LRUCache) Get(key string) (interface{}, bool){
 	}
 
 	if item.Expiration < time.Now().UnixNano(){
-		l.removeTail()
+		l.Evict(key)
 		return nil , false
 	}
 	return item, true
 }
+
+func (l * LRUCache) Evict(key string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	item, exist := l.Cache[key]
+	if !exist{
+		return
+	}
+	item.PrevCache.NextCache = item.NextCache
+	item.NextCache.PrevCache = item.PrevCache
+
+	delete(l.Cache, key)
+}
+
+
+func (l *LRUCache) InternalClearance(){
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	for key, item := range l.Cache{
+		if item.Expiration < time.Now().UnixNano(){
+			l.Evict(key)
+		}
+	}
+}
+
+func (l *LRUCache) SnapShoter(filepath string) error{
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	file, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	encoder := json.NewEncoder(file)
+	return encoder.Encode(l.Cache)
+}
+

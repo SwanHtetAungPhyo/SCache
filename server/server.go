@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 	"time"
+
 	"github.com/SwanHtetAungPhyo/Scache/constants"
 	"github.com/SwanHtetAungPhyo/Scache/dto"
 	"github.com/SwanHtetAungPhyo/Scache/model"
@@ -14,11 +16,18 @@ import (
 )
 
 
+const (
+	GET = "GET"
+	POST  = "POST"
+	EVICT = "EVICT"
+)
+
 
 type TCPServer struct {
 	Listener net.Listener
 	ScacheArray   *model.LRUCache
 	RequestCount int
+	mu sync.RWMutex
 }
 
 func NewScacheServer(config *Config) (*TCPServer, error) {
@@ -61,22 +70,35 @@ func (server *TCPServer) handleClient(connection net.Conn) {
 			connection.Write([]byte("Invalid JSON format\n"))
 			continue
 		}
+		server.mu.Lock()
 		server.RequestCount++
         fmt.Printf("Server has been called %d times\n", server.RequestCount)
-		newLRU := model.NewLRUCache(10)
+		server.mu.Unlock()
+
+
 		switch request.Command {
 		case "SET":
-			newLRU.Set(request.Key,request.Value,time.Duration(request.Expiration))
-			connection.Write([]byte("200\n"))
+			server.handleSet(connection, request)
 		case "GET":
-			value, codition := newLRU.Get(request.Key)
-			if !codition{
-				connection.Write([]byte("500"))
-			}
-			response, _ := json.Marshal(value)
-			connection.Write(append(response, '\n'))
+			server.handleGet(connection, request)
 		default:
 			connection.Write([]byte("400 Bad Request\n"))
 		}
 	}
+}
+
+
+func (server *TCPServer) handleSet(connection net.Conn, request dto.Request) {
+	server.ScacheArray.Set(request.Key,request.Value, time.Duration(request.Expiration))
+	connection.Write([]byte("200"))
+}
+
+func (server *TCPServer) handleGet(connection net.Conn, request dto.Request) {
+	value, exists := server.ScacheArray.Get(request.Key)
+	if !exists {
+		connection.Write([]byte("404"))
+		return
+	}
+	response , _ :=json.Marshal(value)
+	connection.Write(append(response,'\n'))
 }

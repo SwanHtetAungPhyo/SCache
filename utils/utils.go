@@ -6,7 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-
+	"bufio"
+	"encoding/json"
+	"net"
 	"github.com/SwanHtetAungPhyo/Scache/constants"
 )
 
@@ -58,4 +60,25 @@ func CloseLogFile(logfile *os.File) {
 
 func SeverErrorTracker(functionName string,err error) string {
 	return fmt.Sprintf("%v : %v", functionName, err.Error())
+}
+
+func RequestToServer(request map[string]interface{},port string) interface{}{
+	connection,err := net.Dial("tcp",PortString(port) )
+	if err != nil{
+		return err
+	}
+	
+	defer connection.Close()
+
+	jsonrquest, _ := json.Marshal(request)
+	connection.Write(jsonrquest)
+	connection.Write([]byte("\n"))
+
+	message, _ := bufio.NewReader(connection).ReadString('\n')
+	return message
+}
+
+
+func PortString(port string) string{
+	return fmt.Sprintf("localhost%v", port)
 }
