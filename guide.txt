@@ -1,0 +1,36 @@
+
+[1m[36m                     SWAN'S CACHE SYSTEM MANUAL[0m
+ _______________________________________________________________
+|                                                               |
+| [34mRUN INSTRUCTIONS:[0m                                              |
+|                                                               |                                            |
+|                                                               |
+| - Access the cache via Netcat (nc):                           |
+|     [32mnc localhost 57[0m                                           |
+|                                                               |
+| [34mCONFIGURATION:[0m                                                |
+|                                                               |
+| - Set cache expiration time (in seconds):                     |
+|     [32mConfig <time_duration_expired>[0m                            |
+|   Example:                                                    |
+|     [32mConfig 300[0m                                                |
+|   This sets the cache expiration to 300 seconds (5 minutes).  |
+|                                                               |
+| [34mSUPPORTED COMMANDS:[0m                                           |
+|                                                               |
+| - GET: Retrieve the value associated with a key.              |
+|     [32mGET <key>[0m                                                 |
+|   Example:                                                    |
+|     [32mGET user_123[0m                                              |
+|                                                               |
+| - UPDATE: Update the value for a given key.                   |
+|     [32mUPDATE <key> <new_value>[0m                                  |
+|   Example:                                                    |
+|     [32mUPDATE user_123 {"name":"John"}[0m                           |
+|                                                               |
+| - DELETE: Remove a key from the cache.                        |
+|     [32mDELETE <key>[0m                                              |
+|   Example:                                                    |
+|     [32mDELETE user_123[0m                                           |
+|                                                               |
+|_______________________________________________________________|
