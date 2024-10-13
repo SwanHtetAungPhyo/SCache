@@ -1,4 +1,4 @@
-module github.com/swan/tester
+module github.com/SwanHtetAungPhyo/testing
 
 go 1.22.5
 
