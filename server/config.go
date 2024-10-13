@@ -7,8 +7,8 @@ import (
 type Option func(*Config)
 
 type Config struct {
-	Port string 
-	Capcity int 
+	Port string
+	Capcity int
 	DefaultExpire time.Duration
 	Listener net.Listener
 }

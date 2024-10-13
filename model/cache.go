@@ -38,22 +38,20 @@ func NewLRUCache(capacity int) *LRUCache {
 }
 
 func (l *LRUCache) MoveToFront(cacheItem *Scache) {
-    if cacheItem == nil || cacheItem.PrevCache == nil || cacheItem.NextCache == nil {
-        return // Prevent nil dereference
-    }
+	if cacheItem == nil || cacheItem.PrevCache == nil || cacheItem.NextCache == nil {
+		return // Prevent nil dereference
+	}
 
-    // Remove the item from its current position
-    cacheItem.PrevCache.NextCache = cacheItem.NextCache
-    cacheItem.NextCache.PrevCache = cacheItem.PrevCache
+	// Remove the item from its current position
+	cacheItem.PrevCache.NextCache = cacheItem.NextCache
+	cacheItem.NextCache.PrevCache = cacheItem.PrevCache
 
-    // Insert the item at the front
-    cacheItem.NextCache = l.head.NextCache
-    cacheItem.PrevCache = l.head
-    l.head.NextCache.PrevCache = cacheItem
-    l.head.NextCache = cacheItem
+	// Insert the item at the front
+	cacheItem.NextCache = l.head.NextCache
+	cacheItem.PrevCache = l.head
+	l.head.NextCache.PrevCache = cacheItem
+	l.head.NextCache = cacheItem
 }
-
-
 
 func (l *LRUCache) Set(key string, value interface{}, duration time.Duration) {
 	l.mu.Lock()
@@ -96,7 +94,7 @@ func (l *LRUCache) removeTail() {
 	lruItem := l.tail.PrevCache
 	l.tail.PrevCache = lruItem.PrevCache
 	lruItem.PrevCache.NextCache = l.tail
-	delete(l.Cache, lruItem.Key) 
+	delete(l.Cache, lruItem.Key)
 }
 
 // Get retrieves an item from the cache
@@ -152,7 +150,12 @@ func (l *LRUCache) SnapShoter(filepath string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
 
 	// Convert the cache items to a slice for JSON encoding
 	var items []Scache

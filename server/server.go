@@ -4,54 +4,51 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"log"
-	"net"
-	"sync"
-	"time"
-
 	"github.com/SwanHtetAungPhyo/Scache/constants"
 	"github.com/SwanHtetAungPhyo/Scache/dto"
 	"github.com/SwanHtetAungPhyo/Scache/model"
 	"github.com/SwanHtetAungPhyo/Scache/utils"
+	"log"
+	"net"
+	"sync"
+	"time"
 )
 
-
 const (
-	GET = "GET"
+	GET   = "GET"
 	POST  = "POST"
 	EVICT = "EVICT"
 )
 
-
 type TCPServer struct {
-	Listener net.Listener
-	ScacheArray   *model.LRUCache
+	Listener     net.Listener
+	ScacheArray  *model.LRUCache
 	RequestCount int
-	mu sync.RWMutex
+	mu           sync.RWMutex
 }
 
 func NewScacheServer(config *Config) (*TCPServer, error) {
 	scacheArray := model.NewLRUCache(config.Capcity)
 
-	listener, err := net.Listen("tcp",config.Port)
+	listener, err := net.Listen("tcp", config.Port)
 	if err != nil {
 		log.Fatalf("Error in listening to the port: %v", err)
 		return nil, err
 	}
 	sServer := &TCPServer{
-		Listener:  listener,
-		ScacheArray: scacheArray,
+		Listener:     listener,
+		ScacheArray:  scacheArray,
 		RequestCount: 0,
 	}
 	go sServer.Start(config.Port)
 
-	return sServer, nil 
+	return sServer, nil
 }
 
 func (server *TCPServer) Start(port string) {
 	for {
 		connection, err := server.Listener.Accept()
-		connection.Write([]byte(fmt.Sprintf("Cache on Port :%v", port)))
+		_, _ = connection.Write([]byte(fmt.Sprintf("Cache on Port :%v", port)))
 		if err != nil {
 			utils.LogMessage(constants.ERROR, err.Error())
 			continue
@@ -62,31 +59,35 @@ func (server *TCPServer) Start(port string) {
 
 // handleClient manages client connections and requests
 func (server *TCPServer) handleClient(connection net.Conn) {
-	defer connection.Close()
+	defer func() {
+		_ = connection.Close()
+	}()
+
 	scanner := bufio.NewScanner(connection)
 	for scanner.Scan() {
-		var request dto.Request
-		if err := json.Unmarshal(scanner.Bytes(), &request); err != nil {
-			connection.Write([]byte("Invalid JSON format\n"))
+		var requests dto.Requests // Change here to handle multiple requests
+		if err := json.Unmarshal(scanner.Bytes(), &requests); err != nil {
+			_, _ = connection.Write([]byte("Invalid JSON format\n"))
 			continue
 		}
+
 		server.mu.Lock()
-		server.RequestCount++
-        fmt.Printf("Server has been called %d times\n", server.RequestCount)
+		server.RequestCount += len(requests.Requests) // Count total requests received
+		fmt.Printf("Server has been called %d times\n", server.RequestCount)
 		server.mu.Unlock()
 
-
-		switch request.Command {
-		case "SET":
-			server.handleSet(connection, request)
-		case "GET":
-			server.handleGet(connection, request)
-		default:
-			connection.Write([]byte("400 Bad Request\n"))
+		for _, request := range requests.Requests { // Loop through each request
+			switch request.Command {
+			case "SET":
+				server.handleSet(connection, request)
+			case "GET":
+				server.handleGet(connection, request)
+			default:
+				_, _ = connection.Write([]byte("400 Bad Request\n"))
+			}
 		}
 	}
 }
-
 
 func (server *TCPServer) handleSet(connection net.Conn, request dto.Request) {
 	server.ScacheArray.Set(request.Key, request.Value, time.Duration(request.Expiration))
@@ -97,7 +98,7 @@ func (server *TCPServer) handleSet(connection net.Conn, request dto.Request) {
 	}
 
 	responseData, _ := json.Marshal(response)
-	connection.Write(append(responseData, '\n')) 
+	_, _ = connection.Write(append(responseData, '\n'))
 }
 
 func (server *TCPServer) handleGet(connection net.Conn, request dto.Request) {
@@ -109,15 +110,17 @@ func (server *TCPServer) handleGet(connection net.Conn, request dto.Request) {
 			"message": "Key not found",
 		}
 		responseData, _ := json.Marshal(response)
-		connection.Write(append(responseData, '\n'))  
+		_, _ = connection.Write(append(responseData, '\n'))
 		return
 	}
 
-
 	response := map[string]interface{}{
-		"status":  200,
-		"value":   value,
+		"status": 200,
+		"value":  value,
 	}
 	responseData, _ := json.Marshal(response)
-	connection.Write(append(responseData, '\n'))  
+	_, err := connection.Write(append(responseData, '\n'))
+	if err != nil {
+		return
+	}
 }
