@@ -3,7 +3,6 @@ package server
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 
@@ -32,9 +31,9 @@ func NewTCPServer(port string, scache *model.Scache) (*TCPServer, error) {
 
 // Start begins accepting client connections
 func (server *TCPServer) Start() {
-	fmt.Println("Server is on the  Port : 8000")
 	for {
 		connection, err := server.Listener.Accept()
+		connection.Write([]byte("Server is on the  Port : 8000"))
 		if err != nil {
 			utils.LogMessage(constants.ERROR, err.Error())
 			continue
