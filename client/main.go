@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -6,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 	"time"
 
 	"github.com/SwanHtetAungPhyo/Scache/constants"
@@ -67,9 +67,31 @@ func main() {
 		return
 	}
 
-	// Print the server response
-	fmt.Print("Server response:", message)
+	// Unmarshal the response into a Go object
+	var responseObj map[string]interface{}
+	err = json.Unmarshal([]byte(message), &responseObj)
+	if err != nil {
+		fmt.Println("Error unmarshaling response:", err)
+		return
+	}
 
-	// Keep the connection alive (optional)
-	select {}
+	// Save the response to a JSON file
+	responseFile, err := os.Create("server_response.json")
+	if err != nil {
+		fmt.Println("Error creating JSON file:", err)
+		return
+	}
+	defer responseFile.Close()
+
+	// Encode the response object into the file
+	encoder := json.NewEncoder(responseFile)
+	encoder.SetIndent("", "  ") // Optional: pretty-print the JSON
+	err = encoder.Encode(responseObj)
+	if err != nil {
+		fmt.Println("Error writing to JSON file:", err)
+		return
+	}
+
+	// Print the server response to console
+	fmt.Print("Server response saved to server_response.json")
 }

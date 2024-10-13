@@ -89,16 +89,35 @@ func (server *TCPServer) handleClient(connection net.Conn) {
 
 
 func (server *TCPServer) handleSet(connection net.Conn, request dto.Request) {
-	server.ScacheArray.Set(request.Key,request.Value, time.Duration(request.Expiration))
-	connection.Write([]byte("200"))
+	server.ScacheArray.Set(request.Key, request.Value, time.Duration(request.Expiration))
+
+	response := map[string]interface{}{
+		"status":  200,
+		"message": "Key set successfully",
+	}
+
+	responseData, _ := json.Marshal(response)
+	connection.Write(append(responseData, '\n')) 
 }
 
 func (server *TCPServer) handleGet(connection net.Conn, request dto.Request) {
 	value, exists := server.ScacheArray.Get(request.Key)
 	if !exists {
-		connection.Write([]byte("404"))
+
+		response := map[string]interface{}{
+			"status":  404,
+			"message": "Key not found",
+		}
+		responseData, _ := json.Marshal(response)
+		connection.Write(append(responseData, '\n'))  
 		return
 	}
-	response , _ :=json.Marshal(value)
-	connection.Write(append(response,'\n'))
+
+
+	response := map[string]interface{}{
+		"status":  200,
+		"value":   value,
+	}
+	responseData, _ := json.Marshal(response)
+	connection.Write(append(responseData, '\n'))  
 }
