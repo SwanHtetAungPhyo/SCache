@@ -38,25 +38,21 @@ func NewLRUCache(capacity int) *LRUCache {
 }
 
 func (l *LRUCache) MoveToFront(cacheItem *Scache) {
-	if cacheItem == nil || cacheItem.PrevCache == nil || cacheItem.NextCache == nil {
-		return // Prevent nil dereference
-	}
+    if cacheItem == nil || cacheItem.PrevCache == nil || cacheItem.NextCache == nil {
+        return // Prevent nil dereference
+    }
 
-	// If the item is already at the front, do nothing
-	if cacheItem.PrevCache == l.head {
-		return
-	}
+    // Remove the item from its current position
+    cacheItem.PrevCache.NextCache = cacheItem.NextCache
+    cacheItem.NextCache.PrevCache = cacheItem.PrevCache
 
-	// Remove the item from its current position
-	cacheItem.PrevCache.NextCache = cacheItem.NextCache
-	cacheItem.NextCache.PrevCache = cacheItem.PrevCache
-
-	// Insert the item at the front
-	cacheItem.NextCache = l.head.NextCache
-	cacheItem.PrevCache = l.head
-	l.head.NextCache.PrevCache = cacheItem
-	l.head.NextCache = cacheItem
+    // Insert the item at the front
+    cacheItem.NextCache = l.head.NextCache
+    cacheItem.PrevCache = l.head
+    l.head.NextCache.PrevCache = cacheItem
+    l.head.NextCache = cacheItem
 }
+
 
 
 func (l *LRUCache) Set(key string, value interface{}, duration time.Duration) {
