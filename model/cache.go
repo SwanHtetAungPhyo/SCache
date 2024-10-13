@@ -42,16 +42,16 @@ func (l *LRUCache) MoveToFront(cacheItem *Scache) {
 		return // Prevent nil dereference
 	}
 
-	// If the item is already the head, no need to move it
-	if cacheItem == l.head.NextCache {
+	// If the item is already at the front, do nothing
+	if cacheItem.PrevCache == l.head {
 		return
 	}
 
-	// Remove cacheItem from its current position
+	// Remove the item from its current position
 	cacheItem.PrevCache.NextCache = cacheItem.NextCache
 	cacheItem.NextCache.PrevCache = cacheItem.PrevCache
 
-	// Insert cacheItem at the front
+	// Insert the item at the front
 	cacheItem.NextCache = l.head.NextCache
 	cacheItem.PrevCache = l.head
 	l.head.NextCache.PrevCache = cacheItem
