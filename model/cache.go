@@ -40,39 +40,48 @@ func  NewLRUCache(capacity int)  *LRUCache{
 //Head <-> A <-> B <-> C <-> Tail
 
 func (l *LRUCache) MoveToFront(cacheItem *Scache) {
-	cacheItem.NextCache.PrevCache = cacheItem.NextCache
+	if cacheItem == nil || cacheItem.PrevCache == nil || cacheItem.NextCache == nil {
+		return // Prevent nil dereference
+	}
+
+
+	cacheItem.PrevCache.NextCache = cacheItem.NextCache
 	cacheItem.NextCache.PrevCache = cacheItem.PrevCache
 
 	cacheItem.NextCache = l.head.NextCache
 	cacheItem.PrevCache = l.head
-	
 	l.head.NextCache.PrevCache = cacheItem
 	l.head.NextCache = cacheItem
 }
 
-func (l * LRUCache) Set(key string, value interface{}, duration time.Duration) {
+func (l *LRUCache) Set(key string, value interface{}, duration time.Duration) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if item , exist := l.Cache[key]; exist{
+	if item, exist := l.Cache[key]; exist {
 		item.Value = value
 		item.Expiration = time.Now().Add(duration).UnixNano()
 		l.MoveToFront(item)
-		return 
+		return
 	}
 
 	newItem := &Scache{
 		Key:        key,
 		Value:      value,
 		Expiration: time.Now().Add(duration).UnixNano(),
+		PrevCache:  nil, 
+		NextCache:  nil, 
 	}
+
 
 	l.Cache[key] = newItem
 	l.MoveToFront(newItem)
+
 	if len(l.Cache) > l.MaxSize {
 		l.removeTail()
 	}
 }
+
 
 
 func (l *LRUCache) removeTail() {

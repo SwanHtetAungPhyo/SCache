@@ -1,10 +1,15 @@
 package main
 
 import (
-	"github.com/SwanHtetAungPhyo/Scache/server"
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"net"
 	"time"
-	"github.com/SwanHtetAungPhyo/Scache/utils"
+
 	"github.com/SwanHtetAungPhyo/Scache/constants"
+	"github.com/SwanHtetAungPhyo/Scache/server"
+	"github.com/SwanHtetAungPhyo/Scache/utils"
 )
 func main(){
 	cacheConfig, err := server.NewCofig(
@@ -20,6 +25,26 @@ func main(){
 		 utils.LogMessage(constants.ERROR, err.Error())
 	}	
 
+		
+	connection,err := net.Dial("tcp","localhost:9000" )
+	if err != nil{
+		return 
+	}
 	
+	defer connection.Close()
+	requestObj := map[string]interface{}{
+		"command":    "SET",
+		"key":       "user123",
+		"value":     "John Doe",
+		"expiration": 1697270400,
+	}
+
+	jsonrquest, _ := json.Marshal(requestObj)
+	connection.Write(jsonrquest)
+	connection.Write([]byte("\n"))
+
+	message, _ := bufio.NewReader(connection).ReadString('\n')
+	fmt.Print(message)
+
 	select{}
 }
