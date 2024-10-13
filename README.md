@@ -1,4 +1,4 @@
-# Scache
+# Scache Under Development
 
 Simple GO library that can be apply as the Caching sytem Inpsired by the redis.
 
@@ -18,3 +18,7 @@ Simple GO library that can be apply as the Caching sytem Inpsired by the redis.
 
 
     
+### Installation 
+
+    go get -u github.com/SwanHtetAungPhyo/Scache
+
