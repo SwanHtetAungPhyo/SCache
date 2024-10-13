@@ -3,9 +3,10 @@ package server
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
-
+	"time"
 	"github.com/SwanHtetAungPhyo/Scache/constants"
 	"github.com/SwanHtetAungPhyo/Scache/dto"
 	"github.com/SwanHtetAungPhyo/Scache/model"
@@ -13,27 +14,35 @@ import (
 )
 
 
+
 type TCPServer struct {
 	Listener net.Listener
-	Scache   *model.Scache
+	ScacheArray   *model.LRUCache
 	RequestCount int
 }
 
-// NewTCPServer initializes a new TCP server
-func NewTCPServer(port string, scache *model.Scache) (*TCPServer, error) {
-	listener, err := net.Listen("tcp", port)
+func NewScacheServer(config *Config) (*TCPServer, error) {
+	scacheArray := model.NewLRUCache(config.Capcity)
+
+	listener, err := net.Listen("tcp",config.Port)
 	if err != nil {
 		log.Fatalf("Error in listening to the port: %v", err)
 		return nil, err
 	}
-	return &TCPServer{Listener: listener, Scache: scache}, nil
+	sServer := &TCPServer{
+		Listener:  listener,
+		ScacheArray: scacheArray,
+		RequestCount: 0,
+	}
+	go sServer.Start(config.Port)
+
+	return sServer, nil 
 }
 
-// Start begins accepting client connections
-func (server *TCPServer) Start() {
+func (server *TCPServer) Start(port string) {
 	for {
 		connection, err := server.Listener.Accept()
-		connection.Write([]byte("Server is on the  Port : 8000"))
+		connection.Write([]byte(fmt.Sprintf("Cache on Port :%v", port)))
 		if err != nil {
 			utils.LogMessage(constants.ERROR, err.Error())
 			continue
@@ -53,17 +62,21 @@ func (server *TCPServer) handleClient(connection net.Conn) {
 			continue
 		}
 		server.RequestCount++
-        // fmt.Printf("Server has been called %d times\n", server.RequestCount)
-		// switch request.Command {
-		// case "SET":
-		// 	server.Scache.Set(request.Key, request.Value)
-		// 	connection.Write([]byte("200\n"))
-		// case "GET":
-		// 	value, _ := server.Scache.Get(request.Key)
-		// 	response, _ := json.Marshal(value)
-		// 	connection.Write(append(response, '\n'))
-		// default:
-		// 	connection.Write([]byte("400 Bad Request\n"))
-		// }
+        fmt.Printf("Server has been called %d times\n", server.RequestCount)
+		newLRU := model.NewLRUCache(10)
+		switch request.Command {
+		case "SET":
+			newLRU.Set(request.Key,request.Value,time.Duration(request.Expiration))
+			connection.Write([]byte("200\n"))
+		case "GET":
+			value, codition := newLRU.Get(request.Key)
+			if !codition{
+				connection.Write([]byte("500"))
+			}
+			response, _ := json.Marshal(value)
+			connection.Write(append(response, '\n'))
+		default:
+			connection.Write([]byte("400 Bad Request\n"))
+		}
 	}
 }

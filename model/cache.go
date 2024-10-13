@@ -76,11 +76,27 @@ func (l * LRUCache) Set(key string, value interface{}, duration time.Duration) {
 
 func (l *LRUCache) removeTail() {
 	if l.tail.PrevCache == l.head {
-		return // No items to remove
+		return
 	}
 
 	lruItem := l.tail.PrevCache
 	l.tail.PrevCache = lruItem.PrevCache
 	lruItem.PrevCache.NextCache = l.tail
-	delete(l.Cache, lruItem.Key) // Adjusting this to delete by Key
+	delete(l.Cache, lruItem.Key) 
+}
+
+func (l *LRUCache) Get(key string) (interface{}, bool){
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	 item, exist := l.Cache[key]; 
+	 if !exist{
+		return item, false
+	}
+
+	if item.Expiration < time.Now().UnixNano(){
+		l.removeTail()
+		return nil , false
+	}
+	return item, true
 }
