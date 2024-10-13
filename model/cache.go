@@ -37,10 +37,14 @@ func NewLRUCache(capacity int) *LRUCache {
 	}
 }
 
-// MoveToFront moves the specified cache item to the front of the list
 func (l *LRUCache) MoveToFront(cacheItem *Scache) {
 	if cacheItem == nil || cacheItem.PrevCache == nil || cacheItem.NextCache == nil {
 		return // Prevent nil dereference
+	}
+
+	// If the item is already the head, no need to move it
+	if cacheItem == l.head.NextCache {
+		return
 	}
 
 	// Remove cacheItem from its current position
@@ -54,7 +58,7 @@ func (l *LRUCache) MoveToFront(cacheItem *Scache) {
 	l.head.NextCache = cacheItem
 }
 
-// Set adds a new item to the cache or updates an existing item
+
 func (l *LRUCache) Set(key string, value interface{}, duration time.Duration) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -70,13 +74,17 @@ func (l *LRUCache) Set(key string, value interface{}, duration time.Duration) {
 		Key:        key,
 		Value:      value,
 		Expiration: time.Now().Add(duration).UnixNano(),
-		PrevCache:  nil, // Will be set in MoveToFront
-		NextCache:  nil, // Will be set in MoveToFront
 	}
 
 	// Insert the new item at the front
 	l.Cache[key] = newItem
 	l.MoveToFront(newItem)
+
+	// Set the pointers for the newItem
+	newItem.NextCache = l.head.NextCache
+	newItem.PrevCache = l.head
+	l.head.NextCache.PrevCache = newItem
+	l.head.NextCache = newItem
 
 	if len(l.Cache) > l.MaxSize {
 		l.removeTail()
