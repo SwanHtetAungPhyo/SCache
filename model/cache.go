@@ -8,52 +8,53 @@ import (
 )
 
 type Scache struct {
-	Key string
-	Value interface{}
+	Key        string
+	Value      interface{}
 	Expiration int64
 	PrevCache  *Scache
-	NextCache *Scache
-
+	NextCache  *Scache
 }
 
-type LRUCache struct{
+type LRUCache struct {
 	MaxSize int
-	Cache map[string]*Scache
-	head *Scache
-	tail *Scache
-	mu sync.RWMutex
+	Cache   map[string]*Scache
+	head    *Scache
+	tail    *Scache
+	mu      sync.RWMutex
 }
 
-func  NewLRUCache(capacity int)  *LRUCache{
+func NewLRUCache(capacity int) *LRUCache {
 	head := &Scache{}
 	tail := &Scache{}
 	head.NextCache = tail
-	tail.NextCache = head
+	tail.PrevCache = head
 
 	return &LRUCache{
 		MaxSize: capacity,
-		Cache:    make(map[string]*Scache),
-		head:     head,
-		tail:     tail,
+		Cache:   make(map[string]*Scache),
+		head:    head,
+		tail:    tail,
 	}
 }
-//Head <-> A <-> B <-> C <-> Tail
 
+// MoveToFront moves the specified cache item to the front of the list
 func (l *LRUCache) MoveToFront(cacheItem *Scache) {
 	if cacheItem == nil || cacheItem.PrevCache == nil || cacheItem.NextCache == nil {
 		return // Prevent nil dereference
 	}
 
-
+	// Remove cacheItem from its current position
 	cacheItem.PrevCache.NextCache = cacheItem.NextCache
 	cacheItem.NextCache.PrevCache = cacheItem.PrevCache
 
+	// Insert cacheItem at the front
 	cacheItem.NextCache = l.head.NextCache
 	cacheItem.PrevCache = l.head
 	l.head.NextCache.PrevCache = cacheItem
 	l.head.NextCache = cacheItem
 }
 
+// Set adds a new item to the cache or updates an existing item
 func (l *LRUCache) Set(key string, value interface{}, duration time.Duration) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -69,11 +70,11 @@ func (l *LRUCache) Set(key string, value interface{}, duration time.Duration) {
 		Key:        key,
 		Value:      value,
 		Expiration: time.Now().Add(duration).UnixNano(),
-		PrevCache:  nil, 
-		NextCache:  nil, 
+		PrevCache:  nil, // Will be set in MoveToFront
+		NextCache:  nil, // Will be set in MoveToFront
 	}
 
-
+	// Insert the new item at the front
 	l.Cache[key] = newItem
 	l.MoveToFront(newItem)
 
@@ -82,11 +83,10 @@ func (l *LRUCache) Set(key string, value interface{}, duration time.Duration) {
 	}
 }
 
-
-
+// removeTail removes the least recently used item from the cache
 func (l *LRUCache) removeTail() {
 	if l.tail.PrevCache == l.head {
-		return
+		return // No items to remove
 	}
 
 	lruItem := l.tail.PrevCache
@@ -95,28 +95,30 @@ func (l *LRUCache) removeTail() {
 	delete(l.Cache, lruItem.Key) 
 }
 
-func (l *LRUCache) Get(key string) (interface{}, bool){
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	 item, exist := l.Cache[key]; 
-	 if !exist{
-		return item, false
-	}
-
-	if item.Expiration < time.Now().UnixNano(){
-		l.Evict(key)
-		return nil , false
-	}
-	return item, true
-}
-
-func (l * LRUCache) Evict(key string) {
+// Get retrieves an item from the cache
+func (l *LRUCache) Get(key string) (interface{}, bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	item, exist := l.Cache[key]
-	if !exist{
+	if !exist {
+		return nil, false
+	}
+
+	if item.Expiration < time.Now().UnixNano() {
+		l.Evict(key)
+		return nil, false
+	}
+	return item.Value, true
+}
+
+// Evict removes an item from the cache
+func (l *LRUCache) Evict(key string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	item, exist := l.Cache[key]
+	if !exist {
 		return
 	}
 	item.PrevCache.NextCache = item.NextCache
@@ -125,19 +127,20 @@ func (l * LRUCache) Evict(key string) {
 	delete(l.Cache, key)
 }
 
-
-func (l *LRUCache) InternalClearance(){
+// InternalClearance removes expired items from the cache
+func (l *LRUCache) InternalClearance() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	for key, item := range l.Cache{
-		if item.Expiration < time.Now().UnixNano(){
+	for key, item := range l.Cache {
+		if item.Expiration < time.Now().UnixNano() {
 			l.Evict(key)
 		}
 	}
 }
 
-func (l *LRUCache) SnapShoter(filepath string) error{
+// SnapShoter saves the current state of the cache to a file
+func (l *LRUCache) SnapShoter(filepath string) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -145,7 +148,14 @@ func (l *LRUCache) SnapShoter(filepath string) error{
 	if err != nil {
 		return err
 	}
-	encoder := json.NewEncoder(file)
-	return encoder.Encode(l.Cache)
-}
+	defer file.Close()
 
+	// Convert the cache items to a slice for JSON encoding
+	var items []Scache
+	for _, item := range l.Cache {
+		items = append(items, *item) // Append a copy to avoid pointer issues
+	}
+
+	encoder := json.NewEncoder(file)
+	return encoder.Encode(items)
+}
