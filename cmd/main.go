@@ -28,6 +28,16 @@ func main() {
 		}
 	}(s.Listener)
 
+	//cache := model.NewLRUCache(10)
+	//
+	//value := map[string]interface{}{
+	//	"he": "One",
+	//}
+	//cache.Set("One", value, 100*1000*1000)
+	//var response interface{}
+	//response, _ = cache.Get("One")
+
 	log.Println("Server is running on port:", cacheConfig.Port)
-	select {} // Keep the server running
+	//log.Println(response)
+	select {}
 }
