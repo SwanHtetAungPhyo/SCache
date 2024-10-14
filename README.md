@@ -14,9 +14,7 @@ This is intended for the educational purpose
 
 To install Scache, follow these steps:
 
-1. **Download the Installation Script**:
-
-   You can download the installation script using `curl`:
-
-   ```bash
-   curl -L -o install_scache.sh https://raw.githubusercontent.com/SwanHtetAungPhyo/Scache/main/install_scache.sh
+ Download manually the scachev1.0.0.tar.gz in releases
+ Unzip the .gz 
+ Move the scache executable to the /usr/local/bin
+ Use scache in terminal to start server
