@@ -1,5 +1,4 @@
-#!/bin/bash
-
+#!/usr/bin/bash
 
 VERSION="v1.0.0"
 URL="https://github.com/SwanHtetAungPhyo/Scache/releases/tag/v1.0.0/scachev1.0.0.tar.gz"
